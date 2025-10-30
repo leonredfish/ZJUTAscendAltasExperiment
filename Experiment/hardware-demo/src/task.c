@@ -64,7 +64,7 @@ static void* S4_pressDown_callback_thread(void* args)
     return 0;
     
 }
-static void CallBackS2_PressDown(void* args)
+static void CallBackS4_PressDown(void* args)
 {
     pthread_t taskid;
     pthread_create(&taskid,0,S4_pressDown_callback_thread,NULL);
