@@ -4,8 +4,8 @@
 
 Pca9557Handler* pca9557;
 
-static char NUM[10][2] = {
-    {0x00,0x00},
+static char NUM[11][2] = {
+    {0xE6,0xCB},  //0
     {0x3E,0xFB},  //1
     {0x2E,0x0D},  //2
     {0x2E,0x29},  //3
@@ -14,7 +14,8 @@ static char NUM[10][2] = {
     {0x27,0x09},  //6
     {0x2E,0xFB},  //7
     {0x26,0x09},  //8
-    {0x26,0x39}   //9
+    {0x26,0x39},  //9
+    {0x00,0x00}  //关闭
 };
 
 static void pca9557_wirte_cmd1(unsigned char reg, unsigned char value)
