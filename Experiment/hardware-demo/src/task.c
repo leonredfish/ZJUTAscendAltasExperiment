@@ -132,7 +132,7 @@ void Sht20_Test(void)
         printf("温度为:%f \t湿度为:%f\n",buff[0],buff[1]);
         usleep(2000000);
     }
-     Sht20Close();
+    Sht20Close();
 }
 
 
