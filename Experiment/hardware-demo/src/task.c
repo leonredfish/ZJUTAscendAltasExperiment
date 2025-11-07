@@ -1,5 +1,9 @@
 #include "task.h"
-
+static pthread_t taskid = 0,taskid2 = 0,delay_thread = 0,pca_thread = 0;
+static volatile int LED4_time = 0;
+extern uint8_t framebuffer[320*480*2];
+static volatile uint8_t tens_t = 0;
+static volatile uint8_t ones_t = 0;
 void Led_Pwm_Test(void)
 {
     int flag = 0;
@@ -45,47 +49,170 @@ void Led_Test(void)
     }
 }
 
-
-
-
-static uint8_t ReadKeyS4Status(void)
-{
-    uint8_t res = 0;
-    Keyhandler key;
-    Key_Init(KEY3,&key);
-    res =  Key_Status(&key);
-    Key_close(&key);
-    return res ;
+void LED1_Blink_1s(void){
+    int time = 1000000;
+    Ledhandler led;
+    Led_Init(LED1,&led);
+    while(1)
+    {
+        Led_Low(&led);
+        usleep(time);
+        Led_High(&led);
+        usleep(time);
+    }
 }
-static void* S4_pressDown_callback_thread(void* args)
-{
-    printf("############### S4 Key  PRESS_DOWN ###############\n");
-    Led_Test();
-    return 0;
-    
+void LED4_Blink(void){
+    Ledhandler led;
+    Led_Init(LED4,&led);
+    while(1)
+    {
+        Led_Low(&led);
+        usleep(LED4_time);
+        Led_High(&led);
+        usleep(LED4_time);
+    }
 }
-static void CallBackS4_PressDown(void* args)
+static uint8_t ReadKeyS2Status(void)
 {
-    pthread_t taskid;
-    pthread_create(&taskid,0,S4_pressDown_callback_thread,NULL);
-    //pthread_join(taskid,NULL);
+    uint8_t res1 = 0;
+    Keyhandler key1;
+    Key_Init(KEY3,&key1);
+    res1 =  Key_Status(&key1);
+    Key_close(&key1);
+    return res1 ;
 }
+static uint8_t ReadKeyS3Status(void)
+{
+    uint8_t res2 = 0;
+    Keyhandler key2;
+    Key_Init(KEY3,&key2);
+    res2 =  Key_Status(&key2);
+    Key_close(&key2);
+    return res2 ;
+}
+static void* S2_LongPressStart_callback_thread(void* arg)
+{
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    LED1_Blink_1s();
+    return NULL;
+}
+static void* S3_PressDown_callback_thread(void* arg)
+{
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    LED4_Blink();
+    return NULL;
+}
+static void CallBackS2_LongPressStart(void* args)
+{
+    printf("############### S2 Key LONGPRESS###############\n");
+    if (taskid == 0) {
+        int ret = pthread_create(&taskid,0,S2_LongPressStart_callback_thread,NULL);
+        if (ret != 0) {
+            printf("Failed to create thread: %d\n", ret);
+            taskid = 0;
+        }
+    }
+}
+static void CallBackS2_PressUp(void* args)
+{
+    printf("############### S2 Key RELEASED###############\n");
+    if (taskid != 0) {
+        pthread_cancel(taskid);
+        pthread_join(taskid, NULL);
+        taskid = 0;
+    }
+}
+static void* delay_terminate_thread(void* arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    sleep(5);  // 等待5秒
+    if (taskid2 != 0) {
+        pthread_cancel(taskid2);
+        pthread_join(taskid2, NULL);
+        taskid2 = 0;
+    }
+
+    return NULL;
+}
+
+static void CallBackS3_PressDown(void* args)
+{
+    printf("S3 Key Pressed\n");
+
+    LED4_time = 250000;
+
+    if (delay_thread != 0) {
+        pthread_cancel(delay_thread);
+        pthread_join(delay_thread, NULL);
+        delay_thread = 0;
+    }
+
+    if (taskid2 == 0) {  // 确保线程没有在运行
+        int ret = pthread_create(&taskid2, NULL, S3_PressDown_callback_thread, NULL);
+        if (ret != 0) {
+            printf("Failed to create thread: %d\n", ret);
+            taskid2 = 0;
+        }
+    }
+}
+
+static void CallBackS3_PressUp(void* args)
+{
+    printf("S3 Key Released\n");
+
+    LED4_time = 1000000;
+
+    // 创建延迟结束线程
+    if (delay_thread != 0) {
+        pthread_cancel(delay_thread);
+        pthread_join(delay_thread, NULL);
+    }
+
+    int ret = pthread_create(&delay_thread, NULL, delay_terminate_thread, NULL);
+    if (ret != 0) {
+        printf("Failed to create delay thread: %d\n", ret);
+        // 立即结束线程
+        if (taskid2 != 0) {
+            pthread_cancel(taskid2);
+            pthread_join(taskid2, NULL);
+            taskid2 = 0;
+        }
+    }
+}
+/**
+ * @brief 按键测试函数
+ *
+ * 该函数用于初始化和测试两个按钮，设置按钮的回调函数，并在循环中处理按钮事件。
+ */
 void Key_Test()
 {
-    Button*  button = (Button*)malloc(sizeof(Button));
-    memset(button,0,sizeof(Button));
-    TPin_level  pin_levels2 = ReadKeyS4Status;
-
-    button_init(button,pin_levels2,0,1);
-    button_attach(button,PRESS_DOWN,CallBackS4_PressDown);
-    button_start(button);
+    // 分配并初始化第一个按钮的内存
+    Button*  button1 = (Button*)malloc(sizeof(Button));
+    memset(button1,0,sizeof(Button));
+    // 分配并初始化第二个按钮的内存
+    Button*  button2 = (Button*)malloc(sizeof(Button));
+    memset(button2,0,sizeof(Button));
+    TPin_level  pin_levels2 = ReadKeyS2Status;
+    TPin_level  pin_levels3 = ReadKeyS3Status;
+    button_init(button1,pin_levels2,0,1);
+    button_init(button2,pin_levels3,0,1);
+    button_attach(button1,LONG_PRESS_START,CallBackS2_LongPressStart);
+    button_attach(button1,PRESS_UP,CallBackS2_PressUp);
+    button_attach(button2,PRESS_DOWN,CallBackS3_PressDown);
+    button_attach(button2,PRESS_UP,CallBackS3_PressUp);
+    button_start(button1);
+    button_start(button2);
     while(1)
     {
         button_ticks();
         usleep(5000);//5ms
     }
-    button_stop(button);
-    free(button);
+    button_stop(button1);
+    button_stop(button2);
+    free(button1);
+    free(button2);
 }
 
 
