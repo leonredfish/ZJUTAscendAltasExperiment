@@ -219,9 +219,26 @@ void Key_Test()
 void Adxl345_Test()
 {
     float buff[3];
+    //oled_init();
     Adxl345Init();
+    LCD_Init(L2R_U2D,1000);
+    LCD_Clear(RED);
     while (1){
         Adxl345GetData(buff);
+        GUI_Clear(WHITE);
+        //转化为字符串
+        char str[10];
+        sprintf(str, "%.2f", buff[0]);
+        GUI_DisString_EN(40, 80, "AngleX", &Font20, LCD_BACKGROUND, BLUE);
+        GUI_DisString_EN(40, 120, str, &Font20, LCD_BACKGROUND, BLUE);
+        sprintf(str, "%.2f", buff[1]);
+        GUI_DisString_EN(40, 160, "AngleY", &Font20, LCD_BACKGROUND, BLUE);
+        GUI_DisString_EN(40, 200, str, &Font20, LCD_BACKGROUND, BLUE);
+        sprintf(str, "%.2f", buff[2]);
+        GUI_DisString_EN(40, 240, "AngleZ", &Font20, LCD_BACKGROUND, BLUE);
+        GUI_DisString_EN(40, 280, str, &Font20, LCD_BACKGROUND, BLUE);
+        LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
+        //Refresh();
         printf("AngleX:%0.3f AngleY:%0.3f AngleZ:%0.3f\n",buff[0],buff[1],buff[2]);    // {
     }
 }
@@ -243,26 +260,64 @@ void Oled_Test(void)
         DrawLine(0,0,60,60);
         Refresh();
     }
-    
 }
 
+void Oled_Show(float humidity)
+{
+    ColorTurn(TURNOVER_COLOR);//反色显示
+    DisplayTurn(NORMAL_DISPLAY);//正常显示
+    char str[10];
+    sprintf(str, "%.2f", humidity);
+    ShowString(0,0,"Humidity:",size1206);//显示ASCII字符
+    ShowString(0,12,str,size1608);//显示ASCII字符
+    Refresh();
+}
 
-
+static void* Pca9557_show(void* arg)
+{
+    pca9557_show();
+    return NULL;
+}
+/**
+ * @brief SHT20温湿度传感器测试函数
+ * 该函数初始化SHT20传感器，循环读取温湿度数据并通过OLED显示
+ */
 void Sht20_Test(void)
 {
 
     Sht20Init("/dev/i2c-7",0x40);
+    pca9557_init("/dev/i2c-7");
+    LCD_Init(L2R_U2D,1000);
+    LCD_Clear(RED);
+    if (pca_thread == 0) {
+        int ret = pthread_create(&pca_thread,0,Pca9557_show,NULL);
+        if (ret != 0) {
+            printf("Failed to create thread: %d\n", ret);
+            pca_thread = 0;
+        }
+    }
+    //oled_init();
     float buff[2];
     while (1)
     {
-        Sht20GetData(buff);
-        printf("温度为:%f \t湿度为:%f\n",buff[0],buff[1]);
+        Sht20GetData(&buff);
+        GUI_Clear(WHITE);
+        //Oled_Show(buff[1]);
+        //转化为字符串
+        char str[10];
+        sprintf(str, "%.2f", buff[0]);
+        GUI_DisString_EN(40, 180, "Humidity", &Font20, LCD_BACKGROUND, BLUE);
+        GUI_DisString_EN(40, 220, str, &Font20, LCD_BACKGROUND, BLUE);
+        LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
+        int temperature = (int)(buff[1] + 0.5f);  // 四舍五入取整
+        tens_t = temperature / 10;    // 取十位数字
+        ones_t = temperature % 10;   // 取个位数字
+        pca9557_setnum(10,10,tens_t,ones_t);
+        //Refresh();
         usleep(2000000);
     }
     Sht20Close();
 }
-
-
 
 
 void Pca9557_Test(void)
