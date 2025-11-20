@@ -512,53 +512,104 @@ note:
 	Display String,
 	Show Pic
 ******************************************************************************/
+// void GUI_Show(void)
+// {
+//     printf("LCD_Dis_Column = %d\r\n", sLCD_DIS.LCD_Dis_Column);
+//     printf("LCD_Dis_Page = %d\r\n", sLCD_DIS.LCD_Dis_Page);
+
+//     GUI_Clear(WHITE);
+
+//     // DEBUG("Draw Point\r\n");
+
+//     GUI_DrawPoint(8, 8, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
+//     GUI_DrawPoint(312, 8, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
+//     GUI_DrawPoint(8, 472, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
+//     GUI_DrawPoint(312, 472, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
+
+//     // DEBUG("Draw Point\r\n");
+//     GUI_DrawLine(160, 0,  160, 480, RED, DOT_PIXEL_1X1);
+//     GUI_DrawLine(0, 240,  320, 240, RED, DOT_PIXEL_1X1);
+
+//     //DEBUG("Display String\r\n");
+//     GUI_DisString_EN(40, 120, "Welcome Atlas200", &Font24, LCD_BACKGROUND, BLUE);
+//     GUI_DisString_EN(40, 180, "3.5inch TFTLCD", &Font20, RED, BLUE);
+
+
+//     //DEBUG("Draw Realistic circles\r\n");
+//     uint16_t Cx1 = 120, Cy1 = 240, Cr = 20;
+//     uint16_t Cx2 = Cx1 + (2.5 * Cr), Cy2 = Cy1;
+//     uint16_t Cx3 = Cx1 + (5 * Cr), Cy3 = Cy1;
+//     uint16_t Cx4 = ( Cx1 + Cx2 ) / 2, Cy4 = Cy1 + Cr;
+//     uint16_t Cx5 = ( Cx2 + Cx3 ) / 2, Cy5 = Cy1 + Cr;
+
+//     GUI_DrawCircle( Cx1, Cy1, Cr, BLUE, DRAW_EMPTY, DOT_PIXEL_2X2);
+//     GUI_DrawCircle( Cx2, Cy2, Cr, BLACK, DRAW_EMPTY, DOT_PIXEL_2X2);
+//     GUI_DrawCircle( Cx3, Cy3, Cr, RED, DRAW_EMPTY, DOT_PIXEL_2X2);
+//     GUI_DrawCircle( Cx4, Cy4, Cr, YELLOW, DRAW_EMPTY, DOT_PIXEL_2X2);
+//     GUI_DrawCircle( Cx5, Cy5, Cr, GREEN, DRAW_EMPTY, DOT_PIXEL_2X2);
+
+
+//     // //DEBUG("Draw Realistic circles\r\n");
+//     GUI_DrawCircle(160, 400, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
+//     GUI_DisNum(40, 210, 1234567890, &Font16, LCD_BACKGROUND, BLUE);
+
+
+
+//     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
+
+// }
+
+// 测量工具界面函数
 void GUI_Show(void)
 {
     printf("LCD_Dis_Column = %d\r\n", sLCD_DIS.LCD_Dis_Column);
     printf("LCD_Dis_Page = %d\r\n", sLCD_DIS.LCD_Dis_Page);
-	
+
+    // 清屏为白色背景
     GUI_Clear(WHITE);
 
-    // DEBUG("Draw Point\r\n");
+    // 绘制标题栏
+    // GUI_DrawRectangle(0, 0, 319, 35, BLUE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(30, 15, "Measurement Tool", &Font24, BLUE, WHITE);
 
-    GUI_DrawPoint(8, 8, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
-    GUI_DrawPoint(312, 8, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
-    GUI_DrawPoint(8, 472, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
-    GUI_DrawPoint(312, 472, RED,DOT_PIXEL_8X8, DOT_FILL_AROUND);
+    // 绘制图形显示区域
+    // GUI_DrawRectangle(20, 50, 300, 250, GRAY, DRAW_EMPTY, DOT_PIXEL_1X1);
 
-    // DEBUG("Draw Point\r\n");
-    GUI_DrawLine(160, 0,  160, 480, RED, DOT_PIXEL_1X1);
-    GUI_DrawLine(0, 240,  320, 240, RED, DOT_PIXEL_1X1);
+    // 绘制测试图形 (70x99像素)
+    POINT graphicX = 115;  // 居中位置: (320-70)/2 = 125
+    POINT graphicY = 100;  // (250-50-99)/2 + 50 ≈ 100
+    GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
 
-    //DEBUG("Display String\r\n");
-    GUI_DisString_EN(40, 120, "Welcome Atlas200", &Font24, LCD_BACKGROUND, BLUE);
-    GUI_DisString_EN(40, 180, "3.5inch TFTLCD", &Font20, RED, BLUE);
+    // 图形标签
+    // GUI_DisString_EN(graphicX + 15, graphicY + 40, "70x99", &Font16, BLUE, WHITE);
+    GUI_DisString_EN(25, 260, "Test Graphic", &Font20, WHITE, BLACK);
 
+    // 摄像头图标 (简单绘制)
+    // GUI_DrawCircle(285, 65, 8, BLACK, DRAW_EMPTY, DOT_PIXEL_1X1);
+    // GUI_DrawRectangle(280, 55, 290, 60, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
 
-    //DEBUG("Draw Realistic circles\r\n");
-    uint16_t Cx1 = 120, Cy1 = 240, Cr = 20;
-    uint16_t Cx2 = Cx1 + (2.5 * Cr), Cy2 = Cy1;
-    uint16_t Cx3 = Cx1 + (5 * Cr), Cy3 = Cy1;
-    uint16_t Cx4 = ( Cx1 + Cx2 ) / 2, Cy4 = Cy1 + Cr;
-    uint16_t Cx5 = ( Cx2 + Cx3 ) / 2, Cy5 = Cy1 + Cr;
+    // 测量数据显示区域
+    GUI_DrawRectangle(20, 280, 300, 340, GBLUE, DRAW_FULL, DOT_PIXEL_1X1);
 
-    GUI_DrawCircle( Cx1, Cy1, Cr, BLUE, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawCircle( Cx2, Cy2, Cr, BLACK, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawCircle( Cx3, Cy3, Cr, RED, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawCircle( Cx4, Cy4, Cr, YELLOW, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawCircle( Cx5, Cy5, Cr, GREEN, DRAW_EMPTY, DOT_PIXEL_2X2);
+    // 图形宽度显示
+    // GUI_DisString_EN(10, 290, "Graphic Width:", &Font20, GBLUE, BLACK);
+    // GUI_DisString_EN(240, 290, "70 px", &Font20, GBLUE, BLACK);
 
+    // 距离显示
+    GUI_DisString_EN(10, 290, "Distance to Camera:", &Font20, GBLUE, BLACK);
+    GUI_DisString_EN(240, 330, "45.2 cm", &Font20, GBLUE, BLACK);
 
-    // //DEBUG("Draw Realistic circles\r\n");
-    GUI_DrawCircle(160, 400, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
-    GUI_DisNum(40, 210, 1234567890, &Font16, LCD_BACKGROUND, BLUE);
+    // 状态指示器
+    // GUI_DisString_EN(30, 360, "System Ready", &Font12, WHITE, BLACK);
+    // GUI_DrawCircle(20, 365, 3, GREEN, DRAW_FULL, DOT_PIXEL_1X1);
 
+    // 测量按钮
+    GUI_DrawRectangle(80, 390, 240, 430, BLUE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(100, 380, "MEASURE", &Font24, BLACK, WHITE);
 
-
+    // 更新显示
     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
-
 }
-
 
 
 
