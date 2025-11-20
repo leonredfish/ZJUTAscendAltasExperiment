@@ -373,7 +373,7 @@ void GUI_Disbitmap(POINT Xpoint, POINT Ypoint, const unsigned char *pMap,
     for(j = 0; j < Height; j++) {
         for(i = 0; i < Width; i ++) {
             if(*(pMap + j * byteWidth + i / 8) & (128 >> (i & 7))) {
-                GUI_DrawPoint(Xpoint + i, Ypoint + j, WHITE, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+                GUI_DrawPoint(Xpoint + i, Ypoint + j, BLACK, DOT_PIXEL_DFT, DOT_STYLE_DFT);
             }
         }
     }
