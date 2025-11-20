@@ -7,7 +7,7 @@ static volatile uint8_t ones_t = 0;
 void Led_Pwm_Test(void)
 {
     int flag = 0;
-    int time = 0; 
+    int time = 0;
     Ledhandler led;
     Led_Init(LED1,&led);
     while(1)
@@ -37,7 +37,7 @@ void Led_Pwm_Test(void)
 
 void Led_Test(void)
 {
-    int time = 1000000; 
+    int time = 1000000;
     Ledhandler led;
     Led_Init(LED1,&led);
     while(1)
@@ -252,7 +252,7 @@ void Oled_Test(void)
     {
         ColorTurn(TURNOVER_COLOR);//反色显示
         DisplayTurn(NORMAL_DISPLAY);//正常显示
- 
+
         ShowString(0,0,"abcdefg",size1206);//显示ASCII字符    
         ShowString(0,12,"1234567",size1608);//显示ASCII字符    
         ShowString(0,28,"ABCD",size2412);//显示ASCII字符    
