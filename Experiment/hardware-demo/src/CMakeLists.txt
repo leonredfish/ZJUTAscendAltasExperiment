@@ -24,6 +24,7 @@ set(SRC_LIST
     v4l2.c
     lcd_driver.c
     lcd_gui.c
+    serial_listener.c
 )
 add_definitions(-DENABLE_DVPP_INTERFACE)
 set(INC_PATH $ENV{DDK_PATH})

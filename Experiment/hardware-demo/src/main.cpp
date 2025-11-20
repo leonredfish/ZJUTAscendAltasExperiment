@@ -25,6 +25,7 @@ static struct option longOpt[] = {
     {"t&h",no_argument,0,'t'},
     {"digital",no_argument,0,'d'},
     {"video",no_argument,0,'v'},
+    {"final",no_argument,0,'f'},
     {"help",no_argument,0,'h'}
 };
 
@@ -40,6 +41,7 @@ void GetHelp()
     printf("\033[0;33;34m--t&h          -t    I2C驱动和温度传感器实验 \033[m\r\n");
     printf("\033[0;33;34m--digital      -d    I2C驱动和数码管实验 \033[m\r\n");   
     printf("\033[0;33;34m--video        -v    v4l2摄像头实验 \033[m\r\n");  
+    printf("\033[0;33;34m--final        -f    最终实验 \033[m\r\n");
 }
 
 
@@ -47,7 +49,7 @@ void GetHelp()
 int main(int argc,char* argv[])
 {
     int c;
-    c = getopt_long(argc, argv,"hlwkgcotdv",longOpt,&optIdx);
+    c = getopt_long(argc, argv,"hlwkgcotdvf",longOpt,&optIdx);
     switch(c)
     {
         case 'l':
@@ -89,6 +91,10 @@ int main(int argc,char* argv[])
         case 'h':
         {
             GetHelp();
+        }break;
+        case 'f':
+        {
+            Measure();
         }break;
         default :{
             GetHelp();

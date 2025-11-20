@@ -278,6 +278,9 @@ static void* Pca9557_show(void* arg)
     pca9557_show();
     return NULL;
 }
+void Measure(){
+    serial_listen_loop("/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0",B9600);
+}
 /**
  * @brief SHT20温湿度传感器测试函数
  * 该函数初始化SHT20传感器，循环读取温湿度数据并通过OLED显示
@@ -336,7 +339,7 @@ void Ds1399u_Test()
         .hour=12,
         .minute=30,
         .second=30,
-        .ticks =1
+        .ticks =0
     };
     rtc_set_time(&tod);
     memset(&tod,0,sizeof(tod));
