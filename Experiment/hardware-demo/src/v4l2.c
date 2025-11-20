@@ -13,10 +13,10 @@
 #include <linux/fb.h>
 
 
-#define BUFFER_COUNT 5
-#define VIDEO_WIDTH 640
-#define VIDEO_HEIGHT 480
-#define RGB_SIZE 921600
+#define BUFFER_COUNT 1
+#define VIDEO_WIDTH 1280
+#define VIDEO_HEIGHT 960
+#define RGB_SIZE 3686400
 
 //void yuyv_to_rgb(unsigned char* yuv,unsigned char* rgb);
 //void rgb_to_bmp(unsigned char* pdata, FILE* bmp_fd);
