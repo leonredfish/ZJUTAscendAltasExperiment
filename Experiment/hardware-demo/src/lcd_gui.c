@@ -19,7 +19,7 @@ function:	Coordinate conversion
 ******************************************************************************/
 void GUI_Clear(COLOR Color)
 {
-    for(uint32_t i=0;i<320*480*2;i++)
+    for(uint32_t i=0;i<320*480*2;i+=2)
     {
         framebuffer[i] = Color >> 8;
         framebuffer[i+1] = Color & 0xFF;
@@ -137,19 +137,19 @@ void GUI_DrawRectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
 
     
     if(Filled ) {
-	#if LOW_Speed_Show
+	//#if LOW_Speed_Show
 		POINT Ypoint;
         for(Ypoint = Ystart; Ypoint < Yend; Ypoint++) {
             GUI_DrawLine(Xstart, Ypoint, Xend, Ypoint, Color , Dot_Pixel);
         }
-	#elif HIGH_Speed_Show
-		LCD_SetArealColor( Xstart, Ystart, Xend, Yend, Color);
-	#endif
+	//#elif HIGH_Speed_Show
+	//	LCD_SetArealColor( Xstart, Ystart, Xend, Yend, Color);
+	//#endif
     } else {
         GUI_DrawLine(Xstart, Ystart, Xend, Ystart, Color , Dot_Pixel);
         GUI_DrawLine(Xstart, Ystart, Xstart, Yend, Color , Dot_Pixel);
-        GUI_DrawLine(Xend, Yend, Xend, Ystart, Color , Dot_Pixel);
-        GUI_DrawLine(Xend, Yend, Xstart, Yend, Color , Dot_Pixel);
+        GUI_DrawLine(Xstart, Yend, Xend, Yend, Color , Dot_Pixel);
+        GUI_DrawLine(Xend, Ystart, Xend, Yend, Color , Dot_Pixel);
     }
 }
 
@@ -569,43 +569,43 @@ void GUI_Show(void)
     GUI_Clear(WHITE);
 
     // 绘制标题栏
-    // GUI_DrawRectangle(0, 0, 319, 35, BLUE, DRAW_FULL, DOT_PIXEL_1X1);
-    GUI_DisString_EN(30, 15, "Measurement Tool", &Font24, BLUE, WHITE);
+    GUI_DrawRectangle(0, 0, 320, 35, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(30, 6, "Measurement Tool", &Font24, PURPLE, WHITE);
 
     // 绘制图形显示区域
-    // GUI_DrawRectangle(20, 50, 300, 250, GRAY, DRAW_EMPTY, DOT_PIXEL_1X1);
+    GUI_DrawRectangle(20, 50, 300, 250, GRAY, DRAW_EMPTY, DOT_PIXEL_1X1);
 
     // 绘制测试图形 (70x99像素)
-    POINT graphicX = 115;  // 居中位置: (320-70)/2 = 125
+    POINT graphicX = 125;  // 居中位置: (320-70)/2 = 125
     POINT graphicY = 100;  // (250-50-99)/2 + 50 ≈ 100
     GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
 
     // 图形标签
     // GUI_DisString_EN(graphicX + 15, graphicY + 40, "70x99", &Font16, BLUE, WHITE);
-    GUI_DisString_EN(25, 260, "Test Graphic", &Font20, WHITE, BLACK);
+    GUI_DisString_EN(80, 260, "Test Graphic", &Font20, WHITE, BLACK);
 
     // 摄像头图标 (简单绘制)
     // GUI_DrawCircle(285, 65, 8, BLACK, DRAW_EMPTY, DOT_PIXEL_1X1);
     // GUI_DrawRectangle(280, 55, 290, 60, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
 
     // 测量数据显示区域
-    GUI_DrawRectangle(20, 280, 300, 340, GBLUE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DrawRectangle(0, 280, 320, 360, LIGHTBLUE, DRAW_FULL, DOT_PIXEL_1X1);
 
     // 图形宽度显示
     // GUI_DisString_EN(10, 290, "Graphic Width:", &Font20, GBLUE, BLACK);
     // GUI_DisString_EN(240, 290, "70 px", &Font20, GBLUE, BLACK);
 
     // 距离显示
-    GUI_DisString_EN(10, 290, "Distance to Camera:", &Font20, GBLUE, BLACK);
-    GUI_DisString_EN(240, 330, "45.2 cm", &Font20, GBLUE, BLACK);
+    GUI_DisString_EN(30, 290, "Distance to Camera:", &Font20, LIGHTBLUE, BLACK);
+    GUI_DisString_EN(100, 330, "45.2 cm", &Font20, LIGHTBLUE, BLACK);
 
     // 状态指示器
     // GUI_DisString_EN(30, 360, "System Ready", &Font12, WHITE, BLACK);
     // GUI_DrawCircle(20, 365, 3, GREEN, DRAW_FULL, DOT_PIXEL_1X1);
 
     // 测量按钮
-    GUI_DrawRectangle(80, 390, 240, 430, BLUE, DRAW_FULL, DOT_PIXEL_1X1);
-    GUI_DisString_EN(100, 380, "MEASURE", &Font24, BLACK, WHITE);
+    GUI_DrawRectangle(80, 390, 240, 430, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(103, 400, "MEASURE", &Font24, PURPLE, WHITE);
 
     // 更新显示
     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);

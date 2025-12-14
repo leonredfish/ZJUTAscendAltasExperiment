@@ -34,7 +34,7 @@ typedef enum {
 
 typedef enum {
     DRAW_EMPTY = 0,
-    DRAW_FULL,
+    DRAW_FULL = 1,
 } DRAW_FILL;
 
 
@@ -63,7 +63,14 @@ extern DEV_TIME sDev_time;
 #define BROWN 		   0XBC40
 #define BRRED 		   0XFC07
 #define GRAY  		   0X8430
-
+#define DARKBLUE       0X01CF
+#define LIGHTBLUE      0X7D7C
+#define GRAYBLUE       0X5458
+#define LIGHTGREEN     0X841F
+#define LGRAY 		   0XC618
+#define LGRAYBLUE      0XA651
+#define LBBLUE         0X2B12
+#define PURPLE         0x8010
 
 #define LCD_BACKGROUND		WHITE   //Default background color
 #define FONT_BACKGROUND		WHITE   //Default font background color
