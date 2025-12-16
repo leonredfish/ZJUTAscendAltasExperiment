@@ -3,7 +3,7 @@
 #define LCD_SPI_DEV			"/dev/spidev7.0"
 #define LCD_SPI_MODE 		0x00
 #define LCD_SPI_BITS		8
-#define LCD_SPI_SPEED		5000000
+#define LCD_SPI_SPEED		25000000
 
 static int8_t isInit=0;
 static int lcdspifd;
@@ -46,6 +46,7 @@ static void LCD_InitResource(void)
     int ret;
     uint8_t mode = LCD_SPI_MODE;
     uint8_t bits = LCD_SPI_BITS;
+    unsigned int speed = 1000000;
     lcdspifd = open(LCD_SPI_DEV,O_RDWR);
     if(lcdspifd<0)
     {
@@ -64,7 +65,7 @@ static void LCD_InitResource(void)
         close(lcdspifd);
         return ;
     }
-
+    ret = ioctl(lcdspifd,SPI_IOC_WR_MAX_SPEED_HZ,&speed);
     lcddcfd = open("/sys/class/gpio/gpio81/value",O_RDWR);
     if(lcddcfd <0)
     {
