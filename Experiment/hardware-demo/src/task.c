@@ -288,6 +288,9 @@ void Measure(){
             pca_thread = 0;
         }
     }
+    LCD_Init(L2R_U2D,1000);
+    LCD_Clear(WHITE);
+    GUI_Waiting();
     serial_listen_loop("/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0",B9600);
 }
 /**

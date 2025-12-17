@@ -8,6 +8,8 @@
 #include <termios.h>
 #include <time.h>
 #include "pca9557.h"
+#include "lcd_driver.h"
+#include "lcd_gui.h"
 extern void pca9557_setnum(int D1, int D2, int D3, int D4);
 
 /**
@@ -120,6 +122,7 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
                 if (number == 0){
                     number = 10;
                 }
+
                 printf("=> Extracted Number: %d", number);
                 char cmd[256]; 
                 const char* python_script = "/home/HwHiAiUser/Experiment/hardware-demo/code/main.py";  
@@ -130,11 +133,9 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
                     printf("[Error] Failed to call Python script\n");
                 } else {
                     printf("[Success] Python script executed, return code: %d\n", ret);
+                    GUI_Show();
                 }
-
             }
-        
-
             printf("\n");
         } else if (recv_len == 0) {
             continue;
@@ -147,5 +148,6 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
     }
 
     close(serial_fd); // 理论上不会执行到这里，仅作冗余保护
+    LCD_Exit();
     return 1;
 }

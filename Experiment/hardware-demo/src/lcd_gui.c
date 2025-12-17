@@ -2,10 +2,38 @@
 #include "image_circle.h"
 #include "image_square.h"
 #include "image_triangle.h"
+#include <stdio.h>
+#include <string.h>
 
 extern LCD_DIS sLCD_DIS;
 
 uint8_t framebuffer[320*480*2]; 
+
+// 默认的测量结果文件路径，可根据部署位置调整。
+#define MEASURE_FILE_PATH "../code/detection_logs/measurement_data.txt"
+
+// 读取测量文件的首行，格式：<class> <width> <distance>
+static int load_measurement_data(int *cls, float *distance, float *width)
+{
+    FILE *fp = fopen(MEASURE_FILE_PATH, "r");
+    if (!fp) {
+        perror("fopen measurement file");
+        return -1;
+    }
+
+    char line[128] = {0};
+    if (fgets(line, sizeof(line), fp) == NULL) {
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+
+    if (sscanf(line, "%d %f %f", cls, distance, width) != 3) {
+        return -1;
+    }
+    return 0;
+}
 /******************************************************************************
 function:	Coordinate conversion
 ******************************************************************************/
@@ -522,6 +550,26 @@ void GUI_Show(void)
     printf("LCD_Dis_Column = %d\r\n", sLCD_DIS.LCD_Dis_Column);
     printf("LCD_Dis_Page = %d\r\n", sLCD_DIS.LCD_Dis_Page);
 
+    int cls = -1;
+    float obj_width = 0.0f;
+    float obj_distance = 0.0f;
+    int has_measure = (load_measurement_data(&cls, &obj_distance, &obj_width) == 0);
+    printf(cls, obj_distance, obj_width);
+
+    char line_cls[32] = {0};
+    char line_width[48] = {0};
+    char line_distance[48] = {0};
+
+    if (has_measure) {
+        snprintf(line_cls, sizeof(line_cls), "Class: %d", cls);
+        snprintf(line_distance, sizeof(line_distance), "%.1f cm", obj_distance);
+        snprintf(line_width, sizeof(line_width), "%.1f cm", obj_width);
+    } else {
+        strncpy(line_cls, "Class: N/A", sizeof(line_cls) - 1);
+        strncpy(line_width, "N/A", sizeof(line_width) - 1);
+        strncpy(line_distance, "N/A", sizeof(line_distance) - 1);
+    }
+
     // 清屏为白色背景
     GUI_Clear(WHITE);
 
@@ -535,40 +583,68 @@ void GUI_Show(void)
     // 绘制测试图形 (70x99像素)
     POINT graphicX = 125;  // 居中位置: (320-70)/2 = 125
     POINT graphicY = 100;  // (250-50-99)/2 + 50 ≈ 100
+    switch (cls) {
+        case 1: // 例: 三角形
+        GUI_Disbitmap(graphicX, graphicY, icon_1_bitmap, 70, 99);
+            break;
+        case 2: // 例: 方形
+            GUI_Disbitmap(graphicX, graphicY, icon_2_bitmap, 70, 99);
+            break;
+        case 0: // 例: 圆形
+            GUI_Disbitmap(graphicX, graphicY, icon_3_bitmap, 70, 99);
+            break;
+        default:
+            // 未知类别，绘制空白框
+            GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
+            break;
+    }
     GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
 
     // 图形标签
     // GUI_DisString_EN(graphicX + 15, graphicY + 40, "70x99", &Font16, BLUE, WHITE);
-    GUI_DisString_EN(80, 260, "Test Graphic", &Font20, WHITE, BLACK);
+    GUI_DisString_EN(80, 260, "Object Type", &Font20, WHITE, BLACK);
 
     // 摄像头图标 (简单绘制)
     // GUI_DrawCircle(285, 65, 8, BLACK, DRAW_EMPTY, DOT_PIXEL_1X1);
     // GUI_DrawRectangle(280, 55, 290, 60, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
 
     // 测量数据显示区域
-    GUI_DrawRectangle(0, 280, 320, 360, LIGHTBLUE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DrawRectangle(0, 290, 320, 480, LIGHTBLUE, DRAW_FULL, DOT_PIXEL_1X1);
 
-    // 图形宽度显示
-    // GUI_DisString_EN(10, 290, "Graphic Width:", &Font20, GBLUE, BLACK);
-    // GUI_DisString_EN(240, 290, "70 px", &Font20, GBLUE, BLACK);
-
-    // 距离显示
-    GUI_DisString_EN(30, 290, "Distance to Camera:", &Font20, LIGHTBLUE, BLACK);
-    GUI_DisString_EN(100, 330, "45.2 cm", &Font20, LIGHTBLUE, BLACK);
-
+    GUI_DisString_EN(30, 310, "Distance to Camera", &Font20, LIGHTBLUE, BLACK);
+    GUI_DisString_EN(95, 340, line_distance, &Font20, LIGHTBLUE, BLACK);
+    GUI_DisString_EN(70, 380, "Object width", &Font20, LIGHTBLUE, BLACK);
+    GUI_DisString_EN(95, 410, line_width, &Font20, LIGHTBLUE, BLACK);
     // 状态指示器
     // GUI_DisString_EN(30, 360, "System Ready", &Font12, WHITE, BLACK);
     // GUI_DrawCircle(20, 365, 3, GREEN, DRAW_FULL, DOT_PIXEL_1X1);
 
     // 测量按钮
-    GUI_DrawRectangle(80, 390, 240, 430, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
-    GUI_DisString_EN(103, 400, "MEASURE", &Font24, PURPLE, WHITE);
+    // GUI_DrawRectangle(80, 390, 240, 430, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
+    // GUI_DisString_EN(103, 400, "MEASURE", &Font24, PURPLE, WHITE);
 
     // 更新显示
     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
 }
 
+// 开始等待界面函数
 
+void GUI_Waiting(void)
+{
+    // 清屏为白色背景
+    GUI_Clear(WHITE);
+
+    // 绘制标题栏
+    GUI_DrawRectangle(0, 0, 320, 35, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(30, 6, "Measurement Tool", &Font24, PURPLE, WHITE);
+
+    // 显示等待信息
+    GUI_DisString_EN(80, 200, "System Initializing...", &Font20, WHITE, BLACK);
+    GUI_DisString_EN(100, 240, "Please Wait", &Font20, WHITE, BLACK);
+
+    // 更新显示
+    LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
+}
 
 
 
