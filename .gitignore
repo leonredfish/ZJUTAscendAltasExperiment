@@ -9,3 +9,5 @@ model/
 *.o
 
 .conda/
+
+*.pt
