@@ -279,6 +279,15 @@ static void* Pca9557_show(void* arg)
     return NULL;
 }
 void Measure(){
+    pca9557_init("/dev/i2c-7");
+    pca9557_setnum(10,10,10,0);
+    if (pca_thread == 0) {
+        int ret = pthread_create(&pca_thread,0,Pca9557_show,NULL);
+        if (ret != 0) {
+            printf("Failed to create thread: %d\n", ret);
+            pca_thread = 0;
+        }
+    }
     serial_listen_loop("/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0",B9600);
 }
 /**

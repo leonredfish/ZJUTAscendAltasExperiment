@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <termios.h>
 #include <time.h>
+#include "pca9557.h"
+extern void pca9557_setnum(int D1, int D2, int D3, int D4);
 
 /**
  * 串口初始化函数（内部辅助函数，不对外暴露）
@@ -114,12 +116,16 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
             if (recv_len == 3) { 
                 unsigned char low4bit = recv_buffer[0] & 0x0F;  // 0x0F 是二进制 00001111，保留低4位
                 int number = low4bit; 
+                pca9557_setnum(10,10,10,number);
+                if (number == 0){
+                    number = 10;
+                }
                 printf("=> Extracted Number: %d", number);
                 char cmd[256]; 
                 const char* python_script = "/home/HwHiAiUser/Experiment/hardware-demo/code/main.py";  
                 snprintf(cmd, sizeof(cmd), "/home/HwHiAiUser/.conda/envs/embedded/bin/python3.8 %s %d", python_script, number);
 
-                int ret = system(cmd);  // ret 是脚本执行返回值（0 表示成功）
+                int ret = system(cmd);  // ret 是脚本执行返回值
                 if (ret == -1) {
                     printf("[Error] Failed to call Python script\n");
                 } else {
