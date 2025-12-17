@@ -98,5 +98,6 @@ void GUI_DisNum(POINT Xpoint, POINT Ypoint, int32_t Nummber, sFONT* Font, COLOR 
 void GUI_Showtime(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, DEV_TIME *pTime, COLOR Color);
 //show
 void GUI_Show(void);
+void GUI_Waiting(void);
 
 #endif
