@@ -1,4 +1,7 @@
 #include "lcd_gui.h"
+#include "image_circle.h"
+#include "image_square.h"
+#include "image_triangle.h"
 
 extern LCD_DIS sLCD_DIS;
 

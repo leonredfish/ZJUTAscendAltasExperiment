@@ -11,9 +11,6 @@
 #include "v4l2.h"
 #include "lcd_gui.h"
 #include "serial_listener.h"
-#include "image_circle.h"
-#include "image_square.h"
-#include "image_triangle.h"
 typedef uint8_t(*TPin_level)();
 
 
