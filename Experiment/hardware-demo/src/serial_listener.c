@@ -10,6 +10,7 @@
 #include "pca9557.h"
 #include "lcd_driver.h"
 #include "lcd_gui.h"
+extern int mode;
 extern void pca9557_setnum(int D1, int D2, int D3, int D4);
 
 /**
@@ -91,9 +92,9 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
 
     // 死循环：发送+监听
     while (1) {
-        // 1. 检查是否到达发送间隔（每2秒发送一次）
+        // 1. 检查是否到达发送间隔（每10秒发送一次）
         time_t current_time = time(NULL);
-        if (current_time - last_send_time >= 2) { // 间隔≥2秒则发送
+        if (current_time - last_send_time >= 2) { // 间隔≥10秒则发送
             // 发送指定字节数组
             ssize_t send_ret = write(serial_fd, send_buf, send_len);
             if (send_ret == send_len) {
@@ -123,16 +124,22 @@ int serial_listen_loop(const char* serial_dev, speed_t baudrate) {
                     number = 10;
                 }
 
+                const char *dir_path = "/home/HwHiAiUser/Experiment/hardware-demo/code/detection_logs";
+                char rm_cmd[100] = {0};
+                snprintf(rm_cmd, sizeof(rm_cmd), "rm -rf '%s'", dir_path);
+                int ret = system(rm_cmd);
+
                 printf("=> Extracted Number: %d", number);
                 char cmd[256]; 
                 const char* python_script = "/home/HwHiAiUser/Experiment/hardware-demo/code/main.py";  
                 snprintf(cmd, sizeof(cmd), "/home/HwHiAiUser/.conda/envs/embedded/bin/python3.8 %s %d", python_script, number);
 
-                int ret = system(cmd);  // ret 是脚本执行返回值
+                ret = system(cmd);  // ret 是脚本执行返回值
                 if (ret == -1) {
                     printf("[Error] Failed to call Python script\n");
                 } else {
                     printf("[Success] Python script executed, return code: %d\n", ret);
+                    mode = 0;
                     GUI_Show();
                 }
             }

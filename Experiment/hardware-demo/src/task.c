@@ -1,9 +1,10 @@
 #include "task.h"
-static pthread_t taskid = 0,taskid2 = 0,delay_thread = 0,pca_thread = 0;
+static pthread_t taskid = 0,taskid2 = 0,delay_thread = 0,pca_thread = 0,button_thread = 0;
 static volatile int LED4_time = 0;
 extern uint8_t framebuffer[320*480*2];
 static volatile uint8_t tens_t = 0;
 static volatile uint8_t ones_t = 0;
+extern int mode;
 void Led_Pwm_Test(void)
 {
     int flag = 0;
@@ -214,11 +215,24 @@ void Key_Test()
     free(button1);
     free(button2);
 }
-
-
+static void* Key_search(void* arg) {
+    while(1)
+    {
+        button_ticks();
+        usleep(5000);//5ms
+    }
+}
+static void Show_Measure(void* args){
+    mode = 1 - mode;
+    GUI_Show();
+}
+/**
+ * @brief ADXL345加速度传感器测试函数
+ * 该函数用于初始化ADXL345传感器，并在LCD屏幕上实时显示三轴加速度数据
+ */
 void Adxl345_Test()
 {
-    float buff[3];
+    float buff[3];    // 定义浮点型数组，用于存储三轴加速度数据
     //oled_init();
     Adxl345Init();
     LCD_Init(L2R_U2D,1000);
@@ -279,8 +293,23 @@ static void* Pca9557_show(void* arg)
     return NULL;
 }
 void Measure(){
+    const char *dir_path = "/home/HwHiAiUser/Experiment/hardware-demo/code/detection_logs";
+    char cmd[100] = {0};
+    // 拼接 rm -rf 命令（注意路径含空格时需加引号）
+    snprintf(cmd, sizeof(cmd), "rm -rf '%s'", dir_path);
+    // 执行命令
+    int ret = system(cmd);
     pca9557_init("/dev/i2c-7");
     pca9557_setnum(10,10,10,0);
+    Button*  button2 = (Button*)malloc(sizeof(Button));
+    memset(button2,0,sizeof(Button));
+    TPin_level  pin_levels3 = ReadKeyS3Status;
+    button_init(button2,pin_levels3,0,1);
+    button_attach(button2,PRESS_DOWN,Show_Measure);
+    button_start(button2);
+    LCD_Init(L2R_U2D,1000);
+    LCD_Clear(WHITE);
+    GUI_Waiting();
     if (pca_thread == 0) {
         int ret = pthread_create(&pca_thread,0,Pca9557_show,NULL);
         if (ret != 0) {
@@ -288,10 +317,16 @@ void Measure(){
             pca_thread = 0;
         }
     }
-    LCD_Init(L2R_U2D,1000);
-    LCD_Clear(WHITE);
-    GUI_Waiting();
+    if (button_thread == 0) {
+        int ret = pthread_create(&button_thread,0,Key_search,NULL);
+        if (ret != 0) {
+            printf("Failed to create thread: %d\n", ret);
+            button_thread = 0;
+        }
+    }
     serial_listen_loop("/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0",B9600);
+    button_stop(button2);
+    free(button2);
 }
 /**
  * @brief SHT20温湿度传感器测试函数

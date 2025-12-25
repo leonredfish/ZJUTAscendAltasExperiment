@@ -4,17 +4,24 @@
 #include "image_triangle.h"
 #include <stdio.h>
 #include <string.h>
-
 extern LCD_DIS sLCD_DIS;
-
+int cls = -1;
+float obj_width = 0.0f;
+float obj_distance = 0.0f;
 uint8_t framebuffer[320*480*2]; 
-
+int mode = 0; //0: result mode; 1:picture mode
 // 默认的测量结果文件路径，可根据部署位置调整。
 #define MEASURE_FILE_PATH "../code/detection_logs/measurement_data.txt"
 
 // 读取测量文件的首行，格式：<class> <width> <distance>
 static int load_measurement_data(int *cls, float *distance, float *width)
 {
+    // 入参合法性检查
+    if (cls == NULL || distance == NULL || width == NULL) {
+        fprintf(stderr, "Invalid input parameters\n");
+        return -1;
+    }
+
     FILE *fp = fopen(MEASURE_FILE_PATH, "r");
     if (!fp) {
         perror("fopen measurement file");
@@ -24,14 +31,19 @@ static int load_measurement_data(int *cls, float *distance, float *width)
     char line[128] = {0};
     if (fgets(line, sizeof(line), fp) == NULL) {
         fclose(fp);
+        fprintf(stderr, "Read measurement file failed or file is empty\n");
         return -1;
     }
 
+    // 先关闭文件再解析（避免文件句柄泄漏）
     fclose(fp);
 
+    // 解析数据
     if (sscanf(line, "%d %f %f", cls, distance, width) != 3) {
+        fprintf(stderr, "Parse measurement data failed, line: %s\n", line);
         return -1;
     }
+
     return 0;
 }
 /******************************************************************************
@@ -55,7 +67,6 @@ void GUI_Clear(COLOR Color)
         framebuffer[i] = Color >> 8;
         framebuffer[i+1] = Color & 0xFF;
     }
-    LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
 }
 
 static void GUI_SetPointlColor(uint16_t x, uint16_t y, COLOR Color)
@@ -162,9 +173,9 @@ void GUI_DrawRectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
     }
 
     if(Xstart > Xend)
-        GUI_Swop(Xstart, Xend);
+        GUI_Swop(&Xstart, &Xend);
     if(Ystart > Yend)
-        GUI_Swop(Ystart, Yend);
+        GUI_Swop(&Ystart, &Yend);
 
     
     if(Filled ) {
@@ -408,7 +419,6 @@ void GUI_Disbitmap(POINT Xpoint, POINT Ypoint, const unsigned char *pMap,
             }
         }
     }
-    LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
 }
 
 /******************************************************************************
@@ -446,6 +456,9 @@ void GUI_DisGrayMap(POINT Xpoint, POINT Ypoint, const unsigned char *pBmp)
         return;
     }
 }
+/*
+function: Display the colored map,
+*/
 
 sFONT *GUI_GetFontSize(POINT Dx, POINT Dy)
 {
@@ -549,25 +562,35 @@ void GUI_Show(void)
 {
     printf("LCD_Dis_Column = %d\r\n", sLCD_DIS.LCD_Dis_Column);
     printf("LCD_Dis_Page = %d\r\n", sLCD_DIS.LCD_Dis_Page);
-
-    int cls = -1;
-    float obj_width = 0.0f;
-    float obj_distance = 0.0f;
+    if (mode == 1){
+        FILE *fp;
+        if (cls != -1){
+            fp = fopen("../code/detection_logs/result.bin", "rb");
+        } else {
+            fp = fopen("../code/detection_logs/original.bin", "rb");
+        }
+        if (!fp) {
+            perror("fopen result.bin");
+            return ;
+        }
+        size_t read_bytes = fread(framebuffer, 1, sizeof(framebuffer), fp);
+        if (read_bytes != sizeof(framebuffer)) {
+            fprintf(stderr, "fread result.bin failed, read %zu bytes\n", read_bytes
+            );
+            return ;
+        }
+        fclose(fp);
+        LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
+        return ;
+    }
     int has_measure = (load_measurement_data(&cls, &obj_distance, &obj_width) == 0);
-    printf(cls, obj_distance, obj_width);
-
     char line_cls[32] = {0};
     char line_width[48] = {0};
     char line_distance[48] = {0};
 
     if (has_measure) {
-        snprintf(line_cls, sizeof(line_cls), "Class: %d", cls);
         snprintf(line_distance, sizeof(line_distance), "%.1f cm", obj_distance);
-        snprintf(line_width, sizeof(line_width), "%.1f cm", obj_width);
-    } else {
-        strncpy(line_cls, "Class: N/A", sizeof(line_cls) - 1);
-        strncpy(line_width, "N/A", sizeof(line_width) - 1);
-        strncpy(line_distance, "N/A", sizeof(line_distance) - 1);
+        snprintf(line_width, sizeof(line_width), "%.1f mm", obj_width);
     }
 
     // 清屏为白色背景
@@ -585,7 +608,7 @@ void GUI_Show(void)
     POINT graphicY = 100;  // (250-50-99)/2 + 50 ≈ 100
     switch (cls) {
         case 1: // 例: 三角形
-        GUI_Disbitmap(graphicX, graphicY, icon_1_bitmap, 70, 99);
+            GUI_Disbitmap(graphicX, graphicY, icon_1_bitmap, 70, 99);
             break;
         case 2: // 例: 方形
             GUI_Disbitmap(graphicX, graphicY, icon_2_bitmap, 70, 99);
@@ -593,42 +616,28 @@ void GUI_Show(void)
         case 0: // 例: 圆形
             GUI_Disbitmap(graphicX, graphicY, icon_3_bitmap, 70, 99);
             break;
-        default:
-            // 未知类别，绘制空白框
-            GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
+        default: // 未知类别，绘制空白框
             break;
     }
-    GUI_DrawRectangle(graphicX, graphicY, graphicX + 70, graphicY + 99, BLUE, DRAW_EMPTY, DOT_PIXEL_1X1);
-
     // 图形标签
-    // GUI_DisString_EN(graphicX + 15, graphicY + 40, "70x99", &Font16, BLUE, WHITE);
-    GUI_DisString_EN(80, 260, "Object Type", &Font20, WHITE, BLACK);
-
-    // 摄像头图标 (简单绘制)
-    // GUI_DrawCircle(285, 65, 8, BLACK, DRAW_EMPTY, DOT_PIXEL_1X1);
-    // GUI_DrawRectangle(280, 55, 290, 60, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+    GUI_DisString_EN(70, 260, "Object Viewer", &Font20, WHITE, BLACK);
 
     // 测量数据显示区域
     GUI_DrawRectangle(0, 290, 320, 480, LIGHTBLUE, DRAW_FULL, DOT_PIXEL_1X1);
 
-    GUI_DisString_EN(30, 310, "Distance to Camera", &Font20, LIGHTBLUE, BLACK);
-    GUI_DisString_EN(95, 340, line_distance, &Font20, LIGHTBLUE, BLACK);
-    GUI_DisString_EN(70, 380, "Object width", &Font20, LIGHTBLUE, BLACK);
-    GUI_DisString_EN(95, 410, line_width, &Font20, LIGHTBLUE, BLACK);
-    // 状态指示器
-    // GUI_DisString_EN(30, 360, "System Ready", &Font12, WHITE, BLACK);
-    // GUI_DrawCircle(20, 365, 3, GREEN, DRAW_FULL, DOT_PIXEL_1X1);
-
-    // 测量按钮
-    // GUI_DrawRectangle(80, 390, 240, 430, PURPLE, DRAW_FULL, DOT_PIXEL_1X1);
-    // GUI_DisString_EN(103, 400, "MEASURE", &Font24, PURPLE, WHITE);
+    if (has_measure && cls != -1){
+        GUI_DisString_EN(30, 310, "Distance to Camera", &Font20, LIGHTBLUE, BLACK);
+        GUI_DisString_EN(100, 340, line_distance, &Font20, LIGHTBLUE, BLACK);
+        GUI_DisString_EN(70, 380, "Object Side", &Font20, LIGHTBLUE, BLACK);
+        GUI_DisString_EN(100, 415, line_width, &Font20, LIGHTBLUE, BLACK);
+    }
+    else {
+        GUI_DisString_EN(70, 380, "Measure Error!", &Font20, LIGHTBLUE, BLACK);
+    }
 
     // 更新显示
     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
 }
-
-// 开始等待界面函数
-
 void GUI_Waiting(void)
 {
     // 清屏为白色背景
@@ -639,8 +648,8 @@ void GUI_Waiting(void)
     GUI_DisString_EN(30, 6, "Measurement Tool", &Font24, PURPLE, WHITE);
 
     // 显示等待信息
-    GUI_DisString_EN(80, 200, "System Initializing...", &Font20, WHITE, BLACK);
-    GUI_DisString_EN(100, 240, "Please Wait", &Font20, WHITE, BLACK);
+    GUI_DisString_EN(70, 200, "Scan the QR Code", &Font16, WHITE, BLACK);
+    GUI_DisString_EN(55, 240, "to Start Measuring", &Font16, WHITE, BLACK);
 
     // 更新显示
     LCD_SetLocalArea(0, 0, 320, 480, framebuffer, 320*480*2);
