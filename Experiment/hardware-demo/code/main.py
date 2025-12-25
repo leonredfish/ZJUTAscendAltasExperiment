@@ -8,6 +8,8 @@ import joblib
 import torch
 import random
 import argparse
+import struct
+
 # ---------- 参数 ----------
 MODEL_PATH        = '/home/HwHiAiUser/Experiment/hardware-demo/code/background.pt'
 SECOND_MODEL_PATH = '/home/HwHiAiUser/Experiment/hardware-demo/code/shape.pt'
@@ -25,21 +27,29 @@ CLASS_NAMES = {
     -1: "Wrong"
 }
 # 日志文件设置
-LOG_FOLDER = "detection_logs"
+LOG_FOLDER = "/home/HwHiAiUser/Experiment/hardware-demo/code/detection_logs"
 TXT_FILE_NAME = "measurement_data.txt"  # 固定文件名，无时间戳
+# 图片保存路径
+IMAGE_SAVE_FOLDER = "/home/HwHiAiUser/Experiment/hardware-demo/code/detection_logs"
+ORIGINAL_IMAGE_NAME = "original.bin"
+CROPPED_OBJECT_IMAGE_NAME = "result.bin"
 
 # 确保日志文件夹存在
 os.makedirs(LOG_FOLDER, exist_ok=True)
+os.makedirs(IMAGE_SAVE_FOLDER, exist_ok=True)
 
 def get_txt_file_path():
     """生成固定名称的TXT文件路径（无时间戳）"""
     return os.path.join(LOG_FOLDER, TXT_FILE_NAME)
 
+def get_image_save_path(image_name):
+    """生成图片保存路径（无时间戳）"""
+    return os.path.join(IMAGE_SAVE_FOLDER, image_name)
+
 def save_measurement_to_txt(distance, size, ans_id, txt_file):
     """将类别ID、距离、尺寸以空格分隔格式保存到TXT文件（删除类别名和时间字段）"""
     if not txt_file:
         return
-
     # 构建数据内容，仅保留 ans_id、distance、size 三个字段
     data_line = f"{ans_id} {round(float(distance), 2)} {round(float(size), 2)}\n"
 
@@ -50,6 +60,91 @@ def save_measurement_to_txt(distance, size, ans_id, txt_file):
         print(f"保存内容: {data_line.strip()}")
     except Exception as e:
         print(f"TXT数据保存失败: {e}")
+
+def rgb888_to_rgb565(r, g, b):
+    """
+    将8位RGB值（0-255）转换为RGB565格式的16位值
+    RGB565格式：R占5位，G占6位，B占5位
+    计算公式：(R >> 3) << 11 | (G >> 2) << 5 | (B >> 3)
+    """
+    r5 = (r & 0xF8) >> 3  # 保留R的高5位
+    g6 = (g & 0xFC) >> 2  # 保留G的高6位
+    b5 = (b & 0xF8) >> 3  # 保留B的高5位
+    rgb565 = (r5 << 11) | (g6 << 5) | b5
+    return rgb565
+
+def save_image(image,bin_output_path=None, width=320, height=480):
+    """
+    将cv2格式的图像转换为RGB565格式，输出TXT文件（每行两个十进制字节）
+    :param image: cv2读取的图像对象（BGR格式）
+    :param txt_output_path: 输出TXT文件路径
+    :param bin_output_path: 可选，输出二进制文件路径（None则不生成）
+    :param width: 图像宽度（320）
+    :param height: 图像高度（480）
+    """
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # 准备存储数据
+    rgb565_bin_data = bytearray() if bin_output_path else None
+    rgb565_txt_lines = []
+
+    # 按行优先（先宽度，再高度）遍历像素
+    for y in range(height):
+        for x in range(width):
+            # 获取当前像素的RGB值（OpenCV图像为numpy数组，索引为[y, x]）
+            r, g, b = rgb_image[y, x]
+
+            # 转换为RGB565 16位值
+            rgb565 = rgb888_to_rgb565(r, g, b)
+
+            # 拆分为两个字节（大端序，可改为<H小端序）
+            rgb565_bytes = struct.pack('>H', rgb565)
+            byte1, byte2 = rgb565_bytes
+
+            # 记录到TXT行（格式：byte1 byte2）
+            rgb565_txt_lines.append(f"{byte1} {byte2}")
+
+            # 若需要二进制文件，添加到二进制数据
+            if rgb565_bin_data is not None:
+                rgb565_bin_data.extend(rgb565_bytes)
+
+            # 实时打印（可选，注释掉可关闭）
+            # print(f"像素({x},{y}): {byte1} {byte2}")
+    # 写入二进制文件
+    if bin_output_path and rgb565_bin_data:
+        with open(bin_output_path, 'wb') as f:
+            f.write(rgb565_bin_data)
+
+    print(f"RGB565二进制文件已保存到: {bin_output_path}")
+    print(f"二进制文件大小: {len(rgb565_bin_data)} 字节 ({width}*{height}*2 = {width*height*2})")
+
+def draw_detection_boxes(image, detection_info):
+    """在图像上绘制检测框和类别信息"""
+    img_copy = image.copy()
+    for info in detection_info:
+        # 获取边界框坐标
+        x1, y1, x2, y2 = info['bbox']
+        class_id = info['class_id']
+        class_name = info['class_name']
+        confidence = info['confidence']
+
+        # 绘制矩形框
+        color = (0, 255, 0) if class_id == 0 else (255, 0, 0) if class_id == 1 else (0, 0, 255)
+        cv2.rectangle(img_copy, (x1, y1), (x2, y2), color, 2)
+
+        # 添加标签
+        label = f"{class_name} {confidence:.2f}"
+        cv2.putText(img_copy, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
+
+        # 添加尺寸信息
+        dimensions = info['dimensions']
+        if class_id == 0:  # 圆形
+            size_text = f"Diameter: {dimensions['diameter_mm']:.2f}mm"
+        else:  # 三角形或正方形
+            size_text = f"Side: {dimensions['side_length_mm']:.2f}mm"
+
+        cv2.putText(img_copy, size_text, (x1, y2 + 20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
+    img_copy = cv2.resize(img_copy, (320, 480))
+    return img_copy
 
 def order_points(pts):
     rect = np.zeros((4, 2), dtype=np.float32)
@@ -86,7 +181,7 @@ def crop_detections(image, results):
                     cropped_images.append(cropped)
     return cropped_images
 
-def detect_black_frame_corners(image, crop_pixels=5):
+def detect_black_frame_corners(image, crop_pixels=3):
     """
     检测图片中黑色边框内部的四个角点
     先将图像长宽各裁剪掉指定像素数
@@ -368,6 +463,14 @@ def process_single_frame(model, second_model, digit_yolo_model, frame, number, t
     # 1. 找四边形
     results = model(frame, conf=0.25, verbose=False)
     cropped_images = crop_detections(frame, results)
+
+    # 保存原图
+    original_image_path = get_image_save_path(ORIGINAL_IMAGE_NAME)
+    frame_copy = frame.copy()
+    frame_copy = cv2.resize(frame_copy, (480, 320))
+    frame_rotated = cv2.rotate(frame_copy, cv2.ROTATE_90_CLOCKWISE)
+    save_image(frame_rotated, original_image_path)
+
     # 检查是否有裁剪图像
     if not cropped_images or len(cropped_images) == 0:
         print("No objects detected")
@@ -422,8 +525,14 @@ def process_single_frame(model, second_model, digit_yolo_model, frame, number, t
     detection_info, square_bboxes = process_second_model_results(second_results, warped)
     res_D = distance_cm
 
-    # 打印检测信息和尺寸
+    # 如果识别到物体，绘制检测框并保存裁剪图像
     if detection_info:
+        # 在透视变换后的图像上绘制检测框
+        warped_with_boxes = draw_detection_boxes(warped, detection_info)
+        # 保存带检测框的裁剪图像
+        cropped_image_path = get_image_save_path(CROPPED_OBJECT_IMAGE_NAME)
+        save_image(warped_with_boxes, cropped_image_path)
+
         print(f"Detected {len(detection_info)} objects:")
         # 初始化 res_x 为一个较大的值，用于寻找最小正方形
         res_x = INF
@@ -551,7 +660,6 @@ def main():
     args = parser.parse_args()
     number = args.number
     print(f"Received number parameter: {number}")
-    number = 10
 
     # 创建固定名称的TXT文件
     txt_file = get_txt_file_path()
@@ -609,18 +717,19 @@ def main():
         return
 
     # 读取一帧
-    ret, frame = cap.read()
-    cap.release()  # 立即释放摄像头
+    for i in range(1):
+        ret, frame = cap.read()
 
-    if ret and frame is not None and frame.size > 0:
-        print("图像读取成功")
-        number = 10
-        print(f"使用数字 {number} 进行检测")
+        if ret and frame is not None and frame.size > 0:
+            print("图像读取成功")
+            print(f"使用数字 {number} 进行检测")
 
-        # 处理单帧图像
-        process_single_frame(model, second_model, digit_yolo_model, frame, number, txt_file)
-    else:
-        print("图像读取失败")
+            # 处理单帧图像
+            process_single_frame(model, second_model, digit_yolo_model, frame, number, txt_file)
+        else:
+            print("图像读取失败")
+
+    cap.release()
 
     print("\n程序结束")
 
